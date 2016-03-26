@@ -1,6 +1,8 @@
 language: csharp
 solution: KeePass.sln
 script:
-- cd Build ; ./SetVersion.sh
-- cd Build ; ./SnKeys_UseUnique.sh
+- cd Build
+- ./SetVersion.sh
+- ./SnKeys_UseUnique.sh
+- cd ..
 - xbuild /p:Configuration=Release KeePass.sln
