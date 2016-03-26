@@ -20,11 +20,11 @@ rm Plugins/KPScript/KPScript.snk
 rm Plugins/SamplePlugin/SamplePlugin.snk
 
 echo "Creating new keys..."
-sn -k Private_NoDistrib/KeePass.snk
-sn -k Private_NoDistrib/KeePassLib.snk
+sn -q -k Private_NoDistrib/KeePass.snk
+sn -q -k Private_NoDistrib/KeePassLib.snk
 #sn -k Private_NoDistrib/KeePassLibSD.snk
 
-sn -k Private_NoDistrib/ShInstUtil.snk
+sn -q -k Private_NoDistrib/ShInstUtil.snk
 
 #sn -k Private_NoDistrib/ArcFourCipher.snk
 #sn -k Private_NoDistrib/KPScript.snk
