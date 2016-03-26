@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/wrouesnel/keepass.svg?branch=master)](https://travis-ci.org/wrouesnel/keepass)
+
 # Personal Development Repository of KeePass
 
 This is my personal Github fork of the Keepass source code. master includes
