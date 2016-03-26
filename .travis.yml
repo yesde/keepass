@@ -1,7 +1,7 @@
 language: csharp
 solution: KeePass.sln
 before_script:
-- sudo apt-get install -y libmono-system-windows-forms4.0-cil libmono-corlib4.5-cil libmono-system-drawing4.0-cil libmono-system-security4.0-cil libmono-system-xml4.0-cil libmono-system4.0-cil
+- sudo apt-get install -y libmono-system-windows-forms4.0-cil libmono-corlib4.5-cil libmono-system-drawing4.0-cil libmono-system-security4.0-cil libmono-system-xml4.0-cil libmono-system4.0-cil mono-xbuild
 script:
 - cd Build
 - ./SetVersion.sh
