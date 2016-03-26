@@ -1,6 +1,6 @@
 ﻿/*
   KeePass Password Safe - The Open-Source Password Manager
-  Copyright (C) 2003-2014 Dominik Reichl <dominik.reichl@t-online.de>
+  Copyright (C) 2003-2016 Dominik Reichl <dominik.reichl@t-online.de>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -27,12 +27,17 @@ using System.Diagnostics;
 
 using KeePass.Util;
 
+using KeePassLib.Utility;
+
 namespace KeePass.UI
 {
 	public sealed class CustomRichTextBoxEx : RichTextBox
 	{
+		private static bool? m_bForceRedrawOnScroll = null;
+
 		private bool m_bSimpleTextOnly = false;
 		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		[DefaultValue(false)]
 		public bool SimpleTextOnly
 		{
@@ -42,6 +47,7 @@ namespace KeePass.UI
 
 		private bool m_bCtrlEnterAccepts = false;
 		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		[DefaultValue(false)]
 		public bool CtrlEnterAccepts
 		{
@@ -419,5 +425,27 @@ namespace KeePass.UI
 
 			return true;
 		} */
+
+		protected override void OnHScroll(EventArgs e)
+		{
+			base.OnHScroll(e);
+
+			MonoRedrawOnScroll();
+		}
+
+		protected override void OnVScroll(EventArgs e)
+		{
+			base.OnVScroll(e);
+
+			MonoRedrawOnScroll();
+		}
+
+		private void MonoRedrawOnScroll()
+		{
+			if(!m_bForceRedrawOnScroll.HasValue)
+				m_bForceRedrawOnScroll = MonoWorkarounds.IsRequired(1366);
+
+			if(m_bForceRedrawOnScroll.Value) Invalidate();
+		}
 	}
 }

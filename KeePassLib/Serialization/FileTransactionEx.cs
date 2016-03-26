@@ -1,6 +1,6 @@
 ﻿/*
   KeePass Password Safe - The Open-Source Password Manager
-  Copyright (C) 2003-2014 Dominik Reichl <dominik.reichl@t-online.de>
+  Copyright (C) 2003-2016 Dominik Reichl <dominik.reichl@t-online.de>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -19,11 +19,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
+using System.Text;
 
-#if (!KeePassLibSD && !KeePassRT)
+#if (!KeePassLibSD && !KeePassUAP)
 using System.Security.AccessControl;
 #endif
 
@@ -42,6 +42,9 @@ namespace KeePassLib.Serialization
 
 		private const string StrTempSuffix = ".tmp";
 
+		private static Dictionary<string, bool> g_dEnabled =
+			new Dictionary<string, bool>(StrUtil.CaseIgnoreComparer);
+
 		public FileTransactionEx(IOConnectionInfo iocBaseFile)
 		{
 			Initialize(iocBaseFile, true);
@@ -59,12 +62,29 @@ namespace KeePassLib.Serialization
 			m_bTransacted = bTransacted;
 			m_iocBase = iocBaseFile.CloneDeep();
 
+			string strPath = m_iocBase.Path;
+
+#if !KeePassUAP
 			// Prevent transactions for FTP URLs under .NET 4.0 in order to
 			// avoid/workaround .NET bug 621450:
 			// https://connect.microsoft.com/VisualStudio/feedback/details/621450/problem-renaming-file-on-ftp-server-using-ftpwebrequest-in-net-framework-4-0-vs2010-only
-			if(m_iocBase.Path.StartsWith("ftp:", StrUtil.CaseIgnoreCmp) &&
+			if(strPath.StartsWith("ftp:", StrUtil.CaseIgnoreCmp) &&
 				(Environment.Version.Major >= 4) && !NativeLib.IsUnix())
 				m_bTransacted = false;
+			else
+			{
+#endif
+				foreach(KeyValuePair<string, bool> kvp in g_dEnabled)
+				{
+					if(strPath.StartsWith(kvp.Key, StrUtil.CaseIgnoreCmp))
+					{
+						m_bTransacted = kvp.Value;
+						break;
+					}
+				}
+#if !KeePassUAP
+			}
+#endif
 
 			if(m_bTransacted)
 			{
@@ -99,27 +119,30 @@ namespace KeePassLib.Serialization
 		{
 			bool bMadeUnhidden = UrlUtil.UnhideFile(m_iocBase.Path);
 
-#if (!KeePassLibSD && !KeePassRT)
+#if (!KeePassLibSD && !KeePassUAP)
 			FileSecurity bkSecurity = null;
 			bool bEfsEncrypted = false;
 #endif
 
 			if(IOConnection.FileExists(m_iocBase))
 			{
-#if (!KeePassLibSD && !KeePassRT)
+#if !KeePassLibSD
 				if(m_iocBase.IsLocalFile())
 				{
 					try
 					{
+#if !KeePassUAP
 						FileAttributes faBase = File.GetAttributes(m_iocBase.Path);
 						bEfsEncrypted = ((long)(faBase & FileAttributes.Encrypted) != 0);
-
+#endif
 						DateTime tCreation = File.GetCreationTime(m_iocBase.Path);
-						bkSecurity = File.GetAccessControl(m_iocBase.Path);
-
 						File.SetCreationTime(m_iocTemp.Path, tCreation);
+#if !KeePassUAP
+						// May throw with Mono
+						bkSecurity = File.GetAccessControl(m_iocBase.Path);
+#endif
 					}
-					catch(Exception) { Debug.Assert(false); }
+					catch(Exception) { Debug.Assert(NativeLib.IsUnix()); }
 				}
 #endif
 
@@ -128,7 +151,7 @@ namespace KeePassLib.Serialization
 
 			IOConnection.RenameFile(m_iocTemp, m_iocBase);
 
-#if (!KeePassLibSD && !KeePassRT)
+#if (!KeePassLibSD && !KeePassUAP)
 			if(m_iocBase.IsLocalFile())
 			{
 				try
@@ -147,6 +170,16 @@ namespace KeePassLib.Serialization
 #endif
 
 			if(bMadeUnhidden) UrlUtil.HideFile(m_iocBase.Path, true); // Hide again
+		}
+
+		// For plugins
+		public static void Configure(string strPrefix, bool? obTransacted)
+		{
+			if(string.IsNullOrEmpty(strPrefix)) { Debug.Assert(false); return; }
+
+			if(obTransacted.HasValue)
+				g_dEnabled[strPrefix] = obTransacted.Value;
+			else g_dEnabled.Remove(strPrefix);
 		}
 	}
 }

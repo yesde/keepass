@@ -1,6 +1,6 @@
 ﻿/*
   KeePass Password Safe - The Open-Source Password Manager
-  Copyright (C) 2003-2014 Dominik Reichl <dominik.reichl@t-online.de>
+  Copyright (C) 2003-2016 Dominik Reichl <dominik.reichl@t-online.de>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -19,24 +19,29 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
-using System.ComponentModel;
-using System.Drawing;
-using System.Diagnostics;
+
+using KeePassLib;
+using KeePassLib.Native;
+using KeePassLib.Utility;
 
 namespace KeePass.UI
 {
 	/// <summary>
-	/// Exception-safe NotifyIcon wrapper class (workaround for
-	/// exceptions thrown when running KeePass under Mono on
+	/// Exception-safe <c>NotifyIcon</c> wrapper class (workaround
+	/// for exceptions thrown when running KeePass under Mono on
 	/// Mac OS X).
-	/// m_ntf is not checked for null, because construction seems
-	/// to work on all systems and runtimes.
 	/// </summary>
 	public sealed class NotifyIconEx
 	{
 		private NotifyIcon m_ntf = null;
+
+		private Icon m_ico = null; // Property value
+		private Icon m_icoShell = null; // Private copy
 
 		public NotifyIcon NotifyIcon { get { return m_ntf; } }
 
@@ -44,12 +49,13 @@ namespace KeePass.UI
 		{
 			get
 			{
-				try { return m_ntf.ContextMenuStrip; }
-				catch(Exception) { Debug.Assert(false); return null; }
+				try { if(m_ntf != null) return m_ntf.ContextMenuStrip; }
+				catch(Exception) { Debug.Assert(false); }
+				return null;
 			}
 			set
 			{
-				try { m_ntf.ContextMenuStrip = value; }
+				try { if(m_ntf != null) m_ntf.ContextMenuStrip = value; }
 				catch(Exception) { Debug.Assert(false); }
 			}
 		}
@@ -58,26 +64,47 @@ namespace KeePass.UI
 		{
 			get
 			{
-				try { return m_ntf.Visible; }
-				catch(Exception) { Debug.Assert(false); return false; }
+				try { if(m_ntf != null) return m_ntf.Visible; }
+				catch(Exception) { Debug.Assert(false); }
+				return false;
 			}
 			set
 			{
-				try { m_ntf.Visible = value; }
+				try { if(m_ntf != null) m_ntf.Visible = value; }
 				catch(Exception) { Debug.Assert(false); }
 			}
 		}
 
 		public Icon Icon
 		{
-			get
-			{
-				try { return m_ntf.Icon; }
-				catch(Exception) { Debug.Assert(false); return null; }
-			}
+			get { return m_ico; }
 			set
 			{
-				try { m_ntf.Icon = value; }
+				try
+				{
+					m_ico = value;
+					if(m_ntf == null) return;
+
+					Icon icoToDispose = m_icoShell;
+					try
+					{
+						if(m_ico != null)
+						{
+							Size sz = SystemInformation.SmallIconSize;
+							m_icoShell = new Icon(m_ico, sz);
+
+							m_ntf.Icon = m_icoShell;
+						}
+						else m_ntf.Icon = null;
+					}
+					catch(Exception)
+					{
+						Debug.Assert(false);
+						m_ntf.Icon = m_ico;
+					}
+
+					if(icoToDispose != null) icoToDispose.Dispose();
+				}
 				catch(Exception) { Debug.Assert(false); }
 			}
 		}
@@ -86,25 +113,36 @@ namespace KeePass.UI
 		{
 			get
 			{
-				try { return m_ntf.Text; }
-				catch(Exception) { Debug.Assert(false); return string.Empty; }
+				try { if(m_ntf != null) return m_ntf.Text; }
+				catch(Exception) { Debug.Assert(false); }
+				return string.Empty;
 			}
 			set
 			{
-				try { m_ntf.Text = value; }
+				try { if(m_ntf != null) m_ntf.Text = value; }
 				catch(Exception) { Debug.Assert(false); }
 			}
 		}
 
 		public NotifyIconEx(IContainer container)
 		{
-			try { m_ntf = new NotifyIcon(container); }
+			try
+			{
+				bool bNtf = true;
+				DesktopType t = NativeLib.GetDesktopType();
+				if((t == DesktopType.Unity) || (t == DesktopType.Pantheon))
+					bNtf = !MonoWorkarounds.IsRequired(1354);
+
+				if(bNtf) m_ntf = new NotifyIcon(container);
+			}
 			catch(Exception) { Debug.Assert(false); }
 		}
 
 		public void SetHandlers(EventHandler ehClick, EventHandler ehDoubleClick,
 			MouseEventHandler ehMouseDown)
 		{
+			if(m_ntf == null) return;
+
 			try
 			{
 				if(ehClick != null) m_ntf.Click += ehClick;

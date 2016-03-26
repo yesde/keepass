@@ -1,6 +1,6 @@
 /*
   KeePass Password Safe - The Open-Source Password Manager
-  Copyright (C) 2003-2014 Dominik Reichl <dominik.reichl@t-online.de>
+  Copyright (C) 2003-2016 Dominik Reichl <dominik.reichl@t-online.de>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
 */
 
 using System;
-using System.Text;
 using System.Diagnostics;
+using System.Text;
 
 using KeePassLib.Cryptography;
 using KeePassLib.Utility;
@@ -150,7 +150,8 @@ namespace KeePassLib.Security
 
 			byte[] pb = xbProtected.ReadPlainText();
 			Init(bEnableProtection, pb);
-			MemUtil.ZeroByteArray(pb);
+
+			if(bEnableProtection) MemUtil.ZeroByteArray(pb);
 		}
 
 		private void Init(bool bEnableProtection, string str)
@@ -242,7 +243,8 @@ namespace KeePassLib.Security
 
 			byte[] pb = ReadUtf8();
 			ProtectedString ps = new ProtectedString(bProtect, pb);
-			MemUtil.ZeroByteArray(pb);
+
+			if(bProtect) MemUtil.ZeroByteArray(pb);
 			return ps;
 		}
 

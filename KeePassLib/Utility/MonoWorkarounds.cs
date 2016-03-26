@@ -1,6 +1,6 @@
 ﻿/*
   KeePass Password Safe - The Open-Source Password Manager
-  Copyright (C) 2003-2014 Dominik Reichl <dominik.reichl@t-online.de>
+  Copyright (C) 2003-2016 Dominik Reichl <dominik.reichl@t-online.de>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -19,11 +19,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Windows.Forms;
 using System.ComponentModel;
-using System.Reflection;
 using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Text;
+using System.Xml;
+
+#if !KeePassUAP
+using System.Windows.Forms;
+#endif
 
 using KeePassLib.Native;
 
@@ -31,6 +36,8 @@ namespace KeePassLib.Utility
 {
 	public static class MonoWorkarounds
 	{
+		private static Dictionary<uint, bool> m_dForceReq = new Dictionary<uint, bool>();
+
 		private static bool? m_bReq = null;
 		public static bool IsRequired()
 		{
@@ -38,12 +45,31 @@ namespace KeePassLib.Utility
 			return m_bReq.Value;
 		}
 
+		// 1219:
+		//   Mono prepends byte order mark (BOM) to StdIn.
+		//   https://sourceforge.net/p/keepass/bugs/1219/
 		// 1245:
 		//   Key events not raised while Alt is down, and nav keys out of order.
 		//   https://sourceforge.net/p/keepass/bugs/1245/
 		// 1254:
 		//   NumericUpDown bug: text is drawn below up/down buttons.
 		//   https://sourceforge.net/p/keepass/bugs/1254/
+		// 1354:
+		//   Finalizer of NotifyIcon throws on Unity.
+		//   https://sourceforge.net/p/keepass/bugs/1354/
+		// 1358:
+		//   FileDialog crashes when ~/.recently-used is invalid.
+		//   https://sourceforge.net/p/keepass/bugs/1358/
+		// 1366:
+		//   Drawing bug when scrolling a RichTextBox.
+		//   https://sourceforge.net/p/keepass/bugs/1366/
+		// 1378:
+		//   Mono doesn't implement Microsoft.Win32.SystemEvents events.
+		//   https://sourceforge.net/p/keepass/bugs/1378/
+		//   https://github.com/mono/mono/blob/master/mcs/class/System/Microsoft.Win32/SystemEvents.cs
+		// 1418:
+		//   Minimizing a form while loading it doesn't work.
+		//   https://sourceforge.net/p/keepass/bugs/1418/
 		// 5795:
 		//   Text in input field is incomplete.
 		//   https://bugzilla.xamarin.com/show_bug.cgi?id=5795
@@ -89,6 +115,9 @@ namespace KeePassLib.Utility
 		{
 			if(!MonoWorkarounds.IsRequired()) return false;
 
+			bool bForce;
+			if(m_dForceReq.TryGetValue(uBugID, out bForce)) return bForce;
+
 			ulong v = NativeLib.MonoVersion;
 			if(v != 0)
 			{
@@ -99,12 +128,28 @@ namespace KeePassLib.Utility
 			return true;
 		}
 
+		internal static void SetEnabled(string strIDs, bool bEnabled)
+		{
+			if(string.IsNullOrEmpty(strIDs)) return;
+
+			string[] vIDs = strIDs.Split(new char[] { ',' });
+			foreach(string strID in vIDs)
+			{
+				if(string.IsNullOrEmpty(strID)) continue;
+
+				uint uID;
+				if(StrUtil.TryParseUInt(strID.Trim(), out uID))
+					m_dForceReq[uID] = bEnabled;
+			}
+		}
+
+#if !KeePassUAP
 		public static void ApplyTo(Form f)
 		{
 			if(!MonoWorkarounds.IsRequired()) return;
 			if(f == null) { Debug.Assert(false); return; }
 
-#if (!KeePassLibSD && !KeePassRT)
+#if !KeePassLibSD
 			f.HandleCreated += MonoWorkarounds.OnFormHandleCreated;
 			SetWmClass(f);
 
@@ -117,14 +162,14 @@ namespace KeePassLib.Utility
 			if(!MonoWorkarounds.IsRequired()) return;
 			if(f == null) { Debug.Assert(false); return; }
 
-#if (!KeePassLibSD && !KeePassRT)
+#if !KeePassLibSD
 			f.HandleCreated -= MonoWorkarounds.OnFormHandleCreated;
 
 			ApplyToControlsRec(f.Controls, f, MonoWorkarounds.ReleaseControl);
 #endif
 		}
 
-#if (!KeePassLibSD && !KeePassRT)
+#if !KeePassLibSD
 		private delegate void MwaControlHandler(Control c, Form fContext);
 
 		private static void ApplyToControlsRec(Control.ControlCollection cc,
@@ -320,5 +365,39 @@ namespace KeePassLib.Utility
 			return true;
 		}
 #endif
+
+		/// <summary>
+		/// Ensure that the file ~/.recently-used is valid (in order to
+		/// prevent Mono's FileDialog from crashing).
+		/// </summary>
+		internal static void EnsureRecentlyUsedValid()
+		{
+			if(!MonoWorkarounds.IsRequired(1358)) return;
+
+			try
+			{
+				string strFile = Environment.GetFolderPath(
+					Environment.SpecialFolder.Personal);
+				strFile = UrlUtil.EnsureTerminatingSeparator(strFile, false);
+				strFile += ".recently-used";
+
+				if(File.Exists(strFile))
+				{
+					try
+					{
+						// Mono's WriteRecentlyUsedFiles method also loads the
+						// XML file using XmlDocument
+						XmlDocument xd = new XmlDocument();
+						xd.Load(strFile);
+					}
+					catch(Exception) // The XML file is invalid
+					{
+						File.Delete(strFile);
+					}
+				}
+			}
+			catch(Exception) { Debug.Assert(false); }
+		}
+#endif // !KeePassUAP
 	}
 }

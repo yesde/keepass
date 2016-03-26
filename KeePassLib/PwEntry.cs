@@ -1,6 +1,6 @@
 /*
   KeePass Password Safe - The Open-Source Password Manager
-  Copyright (C) 2003-2014 Dominik Reichl <dominik.reichl@t-online.de>
+  Copyright (C) 2003-2016 Dominik Reichl <dominik.reichl@t-online.de>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,8 +20,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Xml;
+
+#if !KeePassUAP
 using System.Drawing;
+#endif
 
 using KeePassLib.Collections;
 using KeePassLib.Interfaces;
@@ -889,12 +891,7 @@ namespace KeePassLib
 
 			if(m_bCompareNaturally) return StrUtil.CompareNaturally(strA, strB);
 
-#if KeePassRT
-			return string.Compare(strA, strB, m_bCaseInsensitive ?
-				StringComparison.CurrentCultureIgnoreCase : StringComparison.CurrentCulture);
-#else
 			return string.Compare(strA, strB, m_bCaseInsensitive);
-#endif
 		}
 	}
 }

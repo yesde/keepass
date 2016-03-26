@@ -1,6 +1,6 @@
 /*
   KeePass Password Safe - The Open-Source Password Manager
-  Copyright (C) 2003-2014 Dominik Reichl <dominik.reichl@t-online.de>
+  Copyright (C) 2003-2016 Dominik Reichl <dominik.reichl@t-online.de>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ using System.Diagnostics;
 using KeePass.App;
 using KeePass.App.Configuration;
 using KeePass.UI;
+using KeePass.UI.ToolStripRendering;
 using KeePass.Resources;
 using KeePass.Util;
 
@@ -54,6 +55,8 @@ namespace KeePass.Forms
 		private CheckedLVItemDXList m_cdxGuiOptions = null;
 		private CheckedLVItemDXList m_cdxAdvanced = null;
 
+		private Dictionary<int, string> m_dTsrUuids = new Dictionary<int, string>();
+
 		private HotKeyControlEx m_hkGlobalAutoType = null;
 		private HotKeyControlEx m_hkSelectedAutoType = null;
 		private HotKeyControlEx m_hkShowWindow = null;
@@ -64,10 +67,10 @@ namespace KeePass.Forms
 		private AceUrlSchemeOverrides m_aceUrlSchemeOverrides = null;
 		private string m_strUrlOverrideAll = string.Empty;
 
-		private bool m_bInitialTsRenderer = true;
+		private string m_strInitialTsRenderer = string.Empty;
 		public bool RequiresUIReinitialize
 		{
-			get { return Program.Config.UI.UseCustomToolStripRenderer != m_bInitialTsRenderer; }
+			get { return (Program.Config.UI.ToolStripRenderer != m_strInitialTsRenderer); }
 		}
 
 		public OptionsForm()
@@ -109,6 +112,11 @@ namespace KeePass.Forms
 			// Can be invoked by tray command; don't use CenterParent
 			Debug.Assert(this.StartPosition == FormStartPosition.CenterScreen);
 
+			// When multiline is enabled, tabs added by plugins can result
+			// in multiple tab rows, cropping the tab content at the bottom;
+			// https://sourceforge.net/p/keepass/discussion/329220/thread/a17a2734/
+			Debug.Assert(!m_tabMain.Multiline);
+
 			GlobalWindowManager.AddWindow(this);
 
 			this.Icon = Properties.Resources.KeePass;
@@ -132,9 +140,40 @@ namespace KeePass.Forms
 			m_aceUrlSchemeOverrides = Program.Config.Integration.UrlSchemeOverrides.CloneDeep();
 			m_strUrlOverrideAll = Program.Config.Integration.UrlOverride;
 
+			Debug.Assert(!m_cmbMenuStyle.Sorted);
+			m_cmbMenuStyle.Items.Add(KPRes.Auto + " (" + KPRes.Recommended + ")");
+			m_cmbMenuStyle.Items.Add(new string('-', 24));
+			int nTsrs = 2, iTsrSel = 0, nSuffixes = 0;
+			foreach(TsrFactory fTsr in TsrPool.Factories)
+			{
+				string strSuffix = string.Empty;
+				if(!fTsr.IsSupported())
+				{
+					strSuffix = " (" + KPRes.IncompatibleEnv + ")";
+					++nSuffixes;
+				}
+
+				string strUuid = Convert.ToBase64String(fTsr.Uuid.UuidBytes);
+				if(Program.Config.UI.ToolStripRenderer == strUuid)
+					iTsrSel = nTsrs;
+
+				m_cmbMenuStyle.Items.Add((fTsr.Name ?? string.Empty) + strSuffix);
+				m_dTsrUuids[nTsrs] = strUuid;
+				++nTsrs;
+			}
+			Debug.Assert(m_cmbMenuStyle.Items.Count == nTsrs);
+			m_cmbMenuStyle.SelectedIndex = iTsrSel;
+			if(nSuffixes > 0) m_cmbMenuStyle.DropDownWidth = m_cmbMenuStyle.Width * 2;
+			if(AppConfigEx.IsOptionEnforced(Program.Config.UI, "ToolStripRenderer"))
+			{
+				m_lblMenuStyle.Enabled = false;
+				m_cmbMenuStyle.Enabled = false;
+			}
+
+			Debug.Assert(!m_cmbBannerStyle.Sorted);
 			m_cmbBannerStyle.Items.Add("(" + KPRes.CurrentStyle + ")");
-			m_cmbBannerStyle.Items.Add("WinXP Login");
-			m_cmbBannerStyle.Items.Add("WinVista Black");
+			m_cmbBannerStyle.Items.Add("Windows XP Login");
+			m_cmbBannerStyle.Items.Add("Windows Vista Black");
 			m_cmbBannerStyle.Items.Add("KeePass Win32");
 			m_cmbBannerStyle.Items.Add("Blue Carbon");
 
@@ -167,9 +206,9 @@ namespace KeePass.Forms
 			}
 			else // Unix
 			{
-				Program.Config.Integration.HotKeyGlobalAutoType = (ulong)Keys.None;
-				Program.Config.Integration.HotKeySelectedAutoType = (ulong)Keys.None;
-				Program.Config.Integration.HotKeyShowWindow = (ulong)Keys.None;
+				m_hkGlobalAutoType.TextNone = KPRes.External;
+				m_hkSelectedAutoType.TextNone = KPRes.External;
+				m_hkShowWindow.TextNone = KPRes.External;
 
 				m_hkGlobalAutoType.Enabled = m_hkSelectedAutoType.Enabled =
 					m_hkShowWindow.Enabled = false;
@@ -253,14 +292,22 @@ namespace KeePass.Forms
 
 			m_cdxSecurityOptions = new CheckedLVItemDXList(m_lvSecurityOptions, true);
 
+			bool? obNoSEv = null; // Allow read-only by enforced config
+			string strSEvSuffix = string.Empty;
+			if(MonoWorkarounds.IsRequired(1378))
+			{
+				obNoSEv = true;
+				strSEvSuffix = " (" + KPRes.UnsupportedByMono + ")";
+			}
+
 			m_cdxSecurityOptions.CreateItem(aceWL, "LockOnWindowMinimize",
 				lvg, KPRes.LockOnMinimize);
 			m_cdxSecurityOptions.CreateItem(aceWL, "LockOnSessionSwitch",
-				lvg, KPRes.LockOnSessionSwitch);
+				lvg, KPRes.LockOnSessionSwitch + strSEvSuffix, obNoSEv);
 			m_cdxSecurityOptions.CreateItem(aceWL, "LockOnSuspend",
-				lvg, KPRes.LockOnSuspend);
+				lvg, KPRes.LockOnSuspend + strSEvSuffix, obNoSEv);
 			m_cdxSecurityOptions.CreateItem(aceWL, "LockOnRemoteControlChange",
-				lvg, KPRes.LockOnRemoteControlChange);
+				lvg, KPRes.LockOnRemoteControlChange + strSEvSuffix, obNoSEv);
 			m_cdxSecurityOptions.CreateItem(aceWL, "ExitInsteadOfLockingAfterTime",
 				lvg, KPRes.ExitInsteadOfLockingAfterTime);
 			m_cdxSecurityOptions.CreateItem(aceWL, "AlwaysExitInsteadOfLocking",
@@ -275,8 +322,11 @@ namespace KeePass.Forms
 				m_cdxSecurityOptions.CreateItem(Program.Config.Native, "NativeKeyTransformations",
 					lvg, KPRes.NativeLibUse);
 
+			bool? obNoWin = null; // Allow read-only by enforced config
+			if(NativeLib.IsUnix()) obNoWin = true;
+
 			m_cdxSecurityOptions.CreateItem(Program.Config.Security, "MasterKeyOnSecureDesktop",
-				lvg, KPRes.MasterKeyOnSecureDesktop);
+				lvg, KPRes.MasterKeyOnSecureDesktop, obNoWin);
 			m_cdxSecurityOptions.CreateItem(Program.Config.Security, "ClearKeyCommandLineParams",
 				lvg, KPRes.ClearKeyCmdLineParams);
 
@@ -323,7 +373,10 @@ namespace KeePass.Forms
 
 		private void LoadGuiOptions()
 		{
-			m_bInitialTsRenderer = Program.Config.UI.UseCustomToolStripRenderer;
+			m_strInitialTsRenderer = Program.Config.UI.ToolStripRenderer;
+
+			bool? obNoMin = null;
+			if(MonoWorkarounds.IsRequired(1418)) obNoMin = true;
 
 			m_lvGuiOptions.Columns.Add(KPRes.Options); // Resize below
 
@@ -348,7 +401,7 @@ namespace KeePass.Forms
 			m_cdxGuiOptions.CreateItem(Program.Config.MainWindow, "MinimizeAfterLocking",
 				lvg, KPRes.MinimizeAfterLocking);
 			m_cdxGuiOptions.CreateItem(Program.Config.MainWindow, "MinimizeAfterOpeningDatabase",
-				lvg, KPRes.MinimizeAfterOpeningDatabase);
+				lvg, KPRes.MinimizeAfterOpeningDatabase, obNoMin);
 			m_cdxGuiOptions.CreateItem(Program.Config.MainWindow, "DisableSaveIfNotModified",
 				lvg, KPRes.DisableSaveIfNotModified);
 
@@ -411,8 +464,8 @@ namespace KeePass.Forms
 			m_lvGuiOptions.Groups.Add(lvg);
 			m_cdxGuiOptions.CreateItem(Program.Config.UI, "RepeatPasswordOnlyWhenHidden",
 				lvg, KPRes.RepeatOnlyWhenHidden);
-			m_cdxGuiOptions.CreateItem(Program.Config.UI, "UseCustomToolStripRenderer",
-				lvg, KPRes.UseCustomToolStripRenderer);
+			// m_cdxGuiOptions.CreateItem(Program.Config.UI, "UseCustomToolStripRenderer",
+			//	lvg, KPRes.UseCustomToolStripRenderer);
 			m_cdxGuiOptions.CreateItem(Program.Config.UI, "ForceSystemFontUnix",
 				lvg, KPRes.ForceSystemFontUnix);
 
@@ -469,6 +522,9 @@ namespace KeePass.Forms
 
 		private void LoadAdvancedOptions()
 		{
+			bool? obNoMin = null;
+			if(MonoWorkarounds.IsRequired(1418)) obNoMin = true;
+
 			m_lvAdvanced.Columns.Add(string.Empty); // Resize below
 
 			m_cdxAdvanced = new CheckedLVItemDXList(m_lvAdvanced, true);
@@ -482,7 +538,7 @@ namespace KeePass.Forms
 			m_cdxAdvanced.CreateItem(Program.Config.Application.Start, "CheckForUpdate",
 				lvg, KPRes.CheckForUpdAtStart);
 			m_cdxAdvanced.CreateItem(Program.Config.Application.Start, "MinimizedAndLocked",
-				lvg, KPRes.StartMinimizedAndLocked);
+				lvg, KPRes.StartMinimizedAndLocked, obNoMin);
 			m_cdxAdvanced.CreateItem(Program.Config.Application.FileClosing, "AutoSave",
 				lvg, KPRes.AutoSaveAtExit);
 
@@ -503,6 +559,13 @@ namespace KeePass.Forms
 				lvg, KPRes.AutoTypeMatchByUrlHostInTitle);
 			m_cdxAdvanced.CreateItem(Program.Config.Integration, "AutoTypeMatchByTagInTitle",
 				lvg, KPRes.AutoTypeMatchByTagInTitle);
+			m_cdxAdvanced.CreateItem(Program.Config.Integration, "AutoTypeExpiredCanMatch",
+				lvg, KPRes.ExpiredEntriesCanMatch);
+			m_cdxAdvanced.CreateItem(Program.Config.Integration, "AutoTypeAlwaysShowSelDialog",
+				lvg, KPRes.AutoTypeAlwaysShowSelDialog);
+
+			lvg = new ListViewGroup(KPRes.AutoType + " - " + KPRes.SendingNoun);
+			m_lvAdvanced.Groups.Add(lvg);
 			m_cdxAdvanced.CreateItem(Program.Config.Integration, "AutoTypePrependInitSequenceForIE",
 				lvg, KPRes.AutoTypePrependInitSeqForIE);
 			m_cdxAdvanced.CreateItem(Program.Config.Integration, "AutoTypeReleaseAltWithKeyPress",
@@ -623,6 +686,10 @@ namespace KeePass.Forms
 
 			m_cdxPolicy.UpdateData(true);
 			m_cdxGuiOptions.UpdateData(true);
+
+			string strUuid;
+			m_dTsrUuids.TryGetValue(m_cmbMenuStyle.SelectedIndex, out strUuid);
+			Program.Config.UI.ToolStripRenderer = (strUuid ?? string.Empty);
 
 			if(m_cmbBannerStyle.SelectedIndex != (int)BannerStyle.Default)
 				Program.Config.UI.BannerStyle = (BannerStyle)
@@ -789,7 +856,7 @@ namespace KeePass.Forms
 		{
 			// ShellUtil.RegisterExtension(AppDefs.FileExtension.FileExt, AppDefs.FileExtension.ExtId,
 			//	KPRes.FileExtName, WinUtil.GetExecutable(), PwDefs.ShortProductName, true);
-			WinUtil.RunElevated(WinUtil.GetExecutable(), "/" +
+			WinUtil.RunElevated(WinUtil.GetExecutable(), "-" +
 				AppDefs.CommandLineOptions.FileExtRegister, false);
 		}
 
@@ -797,7 +864,7 @@ namespace KeePass.Forms
 		{
 			// ShellUtil.UnregisterExtension(AppDefs.FileExtension.FileExt,
 			//	AppDefs.FileExtension.ExtId);
-			WinUtil.RunElevated(WinUtil.GetExecutable(), "/" +
+			WinUtil.RunElevated(WinUtil.GetExecutable(), "-" +
 				AppDefs.CommandLineOptions.FileExtUnregister, false);
 		}
 

@@ -1,6 +1,6 @@
 ﻿/*
   KeePass Password Safe - The Open-Source Password Manager
-  Copyright (C) 2003-2014 Dominik Reichl <dominik.reichl@t-online.de>
+  Copyright (C) 2003-2016 Dominik Reichl <dominik.reichl@t-online.de>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,19 +20,21 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using System.Drawing;
-using System.IO;
-using System.Text.RegularExpressions;
-using System.Security.Cryptography;
-using System.Globalization;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
+
+#if !KeePassUAP
+using System.Drawing;
+using System.Security.Cryptography;
+#endif
 
 using KeePassLib.Collections;
 using KeePassLib.Cryptography.PasswordGenerator;
 using KeePassLib.Native;
 using KeePassLib.Security;
-using KeePassLib.Resources;
 
 namespace KeePassLib.Utility
 {
@@ -219,8 +221,8 @@ namespace KeePassLib.Utility
 				List<StrEncodingInfo> l = new List<StrEncodingInfo>();
 
 				l.Add(new StrEncodingInfo(StrEncodingType.Default,
-#if KeePassRT
-					StrUtil.Utf8.WebName, StrUtil.Utf8, 1, null));
+#if KeePassUAP
+					"Unicode (UTF-8)", StrUtil.Utf8, 1, new byte[] { 0xEF, 0xBB, 0xBF }));
 #else
 #if !KeePassLibSD
 					Encoding.Default.EncodingName,
@@ -230,12 +232,11 @@ namespace KeePassLib.Utility
 					Encoding.Default,
 					(uint)Encoding.Default.GetBytes("a").Length, null));
 #endif
-#if !KeePassRT
+
 				l.Add(new StrEncodingInfo(StrEncodingType.Ascii,
 					"ASCII", Encoding.ASCII, 1, null));
 				l.Add(new StrEncodingInfo(StrEncodingType.Utf7,
 					"Unicode (UTF-7)", Encoding.UTF7, 1, null));
-#endif
 				l.Add(new StrEncodingInfo(StrEncodingType.Utf8,
 					"Unicode (UTF-8)", StrUtil.Utf8, 1, new byte[] { 0xEF, 0xBB, 0xBF }));
 				l.Add(new StrEncodingInfo(StrEncodingType.Utf16LE,
@@ -244,7 +245,8 @@ namespace KeePassLib.Utility
 				l.Add(new StrEncodingInfo(StrEncodingType.Utf16BE,
 					"Unicode (UTF-16 BE)", new UnicodeEncoding(true, false),
 					2, new byte[] { 0xFE, 0xFF }));
-#if (!KeePassLibSD && !KeePassRT)
+
+#if !KeePassLibSD
 				l.Add(new StrEncodingInfo(StrEncodingType.Utf32LE,
 					"Unicode (UTF-32 LE)", new UTF32Encoding(false, false),
 					4, new byte[] { 0xFF, 0xFE, 0x0, 0x0 }));
@@ -356,9 +358,9 @@ namespace KeePassLib.Utility
 		}
 
 		/// <summary>
-		/// Split up a command-line into application and argument.
+		/// Split up a command line into application and argument.
 		/// </summary>
-		/// <param name="strCmdLine">Command-line to split.</param>
+		/// <param name="strCmdLine">Command line to split.</param>
 		/// <param name="strApp">Application path.</param>
 		/// <param name="strArgs">Arguments.</param>
 		public static void SplitCommandLine(string strCmdLine, out string strApp, out string strArgs)
@@ -495,7 +497,7 @@ namespace KeePassLib.Utility
 			if(excp.StackTrace != null)
 				strText += excp.StackTrace + MessageService.NewLine;
 #if !KeePassLibSD
-#if !KeePassRT
+#if !KeePassUAP
 			if(excp.TargetSite != null)
 				strText += excp.TargetSite.ToString() + MessageService.NewLine;
 #endif
@@ -521,7 +523,7 @@ namespace KeePassLib.Utility
 				if(excp.InnerException.StackTrace != null)
 					strText += excp.InnerException.StackTrace + MessageService.NewLine;
 #if !KeePassLibSD
-#if !KeePassRT
+#if !KeePassUAP
 				if(excp.InnerException.TargetSite != null)
 					strText += excp.InnerException.TargetSite.ToString();
 #endif
@@ -758,7 +760,7 @@ namespace KeePassLib.Utility
 			return sb.ToString();
 		}
 
-		private static Regex m_rxNaturalSplit = null;
+		private static Regex g_rxNaturalSplit = null;
 		public static int CompareNaturally(string strX, string strY)
 		{
 			Debug.Assert(strX != null);
@@ -772,16 +774,11 @@ namespace KeePassLib.Utility
 			strX = strX.ToLower(); // Case-insensitive comparison
 			strY = strY.ToLower();
 
-			if(m_rxNaturalSplit == null)
-				m_rxNaturalSplit = new Regex(@"([0-9]+)",
-#if KeePassRT
-					RegexOptions.None);
-#else
-					RegexOptions.Compiled);
-#endif
+			if(g_rxNaturalSplit == null)
+				g_rxNaturalSplit = new Regex(@"([0-9]+)", RegexOptions.Compiled);
 
-			string[] vPartsX = m_rxNaturalSplit.Split(strX);
-			string[] vPartsY = m_rxNaturalSplit.Split(strY);
+			string[] vPartsX = g_rxNaturalSplit.Split(strX);
+			string[] vPartsY = g_rxNaturalSplit.Split(strY);
 
 			for(int i = 0; i < Math.Min(vPartsX.Length, vPartsY.Length); ++i)
 			{
@@ -1188,7 +1185,7 @@ namespace KeePassLib.Utility
 				byte[] pbEnc = ProtectedData.Protect(pbPlain, m_pbOptEnt,
 					DataProtectionScope.CurrentUser);
 
-#if (!KeePassLibSD && !KeePassRT)
+#if (!KeePassLibSD && !KeePassUAP)
 				return Convert.ToBase64String(pbEnc, Base64FormattingOptions.None);
 #else
 				return Convert.ToBase64String(pbEnc);
@@ -1248,7 +1245,7 @@ namespace KeePassLib.Utility
 			return v;
 		}
 
-		private static readonly char[] m_vTagSep = new char[]{ ',', ';', ':' };
+		private static readonly char[] m_vTagSep = new char[] { ',', ';', ':' };
 		public static string TagsToString(List<string> vTags, bool bForDisplay)
 		{
 			if(vTags == null) throw new ArgumentNullException("vTags");
@@ -1301,7 +1298,7 @@ namespace KeePassLib.Utility
 			Array.Reverse(pb);
 			for(int i = 0; i < pb.Length; ++i) pb[i] = (byte)(pb[i] ^ 0x65);
 
-#if (!KeePassLibSD && !KeePassRT)
+#if (!KeePassLibSD && !KeePassUAP)
 			return Convert.ToBase64String(pb, Base64FormattingOptions.None);
 #else
 			return Convert.ToBase64String(pb);
@@ -1461,7 +1458,7 @@ namespace KeePassLib.Utility
 
 			if(strMimeType == null) strMimeType = "application/octet-stream";
 
-#if (!KeePassLibSD && !KeePassRT)
+#if (!KeePassLibSD && !KeePassUAP)
 			return ("data:" + strMimeType + ";base64," + Convert.ToBase64String(
 				pbData, Base64FormattingOptions.None));
 #else
@@ -1491,12 +1488,7 @@ namespace KeePassLib.Utility
 			if(bBase64) return Convert.FromBase64String(strData);
 
 			MemoryStream ms = new MemoryStream();
-
-#if KeePassRT
-			Encoding enc = StrUtil.Utf8;
-#else
 			Encoding enc = Encoding.ASCII;
-#endif
 
 			string[] v = strData.Split('%');
 			byte[] pb = enc.GetBytes(v[0]);

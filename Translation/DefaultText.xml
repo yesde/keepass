@@ -157,6 +157,9 @@
 		<Data Name="AutoType">
 			<Value>Auto-Type</Value>
 		</Data>
+		<Data Name="AutoTypeAlwaysShowSelDialog">
+			<Value>Always show global auto-type entry selection dialog</Value>
+		</Data>
 		<Data Name="AutoTypeCancelOnTitleChange">
 			<Value>Cancel auto-type when the target window title changes</Value>
 		</Data>
@@ -166,8 +169,8 @@
 		<Data Name="AutoTypeEntrySelection">
 			<Value>Auto-Type Entry Selection</Value>
 		</Data>
-		<Data Name="AutoTypeEntrySelectionDescLong">
-			<Value>Multiple entries have been found for the currently active window. Please select the entry, which you want to auto-type into the active window.</Value>
+		<Data Name="AutoTypeEntrySelectionDescLong2">
+			<Value>The following entries have been found for the currently active target window. Please select the entry that you want to auto-type into the target window.</Value>
 		</Data>
 		<Data Name="AutoTypeEntrySelectionDescShort">
 			<Value>Multiple entries exist for the current window.</Value>
@@ -259,9 +262,6 @@
 		<Data Name="Cancel">
 			<Value>Cancel</Value>
 		</Data>
-		<Data Name="CancelCmd">
-			<Value>&amp;Cancel</Value>
-		</Data>
 		<Data Name="CannotMoveEntriesBcsGroup">
 			<Value>Cannot move entries because they aren't stored in the same group.</Value>
 		</Data>
@@ -282,6 +282,9 @@
 		</Data>
 		<Data Name="CheckingForUpd">
 			<Value>Checking for updates</Value>
+		</Data>
+		<Data Name="ClassicAdj">
+			<Value>Classic</Value>
 		</Data>
 		<Data Name="ClearKeyCmdLineParams">
 			<Value>Clear master key command line parameters after using them once</Value>
@@ -415,6 +418,9 @@
 		<Data Name="CopyWholeEntries">
 			<Value>Copy Whole Entries</Value>
 		</Data>
+		<Data Name="CorruptionByExt">
+			<Value>Such a corruption is usually caused by a plugin or a KeePass port. Please try to find out which plugin/port is causing it and report the issue to the corresponding developer.</Value>
+		</Data>
 		<Data Name="Count">
 			<Value>Count</Value>
 		</Data>
@@ -438,6 +444,9 @@
 		</Data>
 		<Data Name="CredSaveUserOnly">
 			<Value>Remember user name only</Value>
+		</Data>
+		<Data Name="CredSpecifyDifferent">
+			<Value>&amp;Specify different server credentials</Value>
 		</Data>
 		<Data Name="CsprojCountError">
 			<Value>There must be exactly one .csproj or .vbproj file.</Value>
@@ -685,6 +694,9 @@
 		<Data Name="ExpiredEntries">
 			<Value>Expired Entries</Value>
 		</Data>
+		<Data Name="ExpiredEntriesCanMatch">
+			<Value>Expired entries can match</Value>
+		</Data>
 		<Data Name="ExpiryTime">
 			<Value>Expiry Time</Value>
 		</Data>
@@ -714,6 +726,9 @@
 		</Data>
 		<Data Name="ExportToPrompt">
 			<Value>Export to:</Value>
+		</Data>
+		<Data Name="External">
+			<Value>External</Value>
 		</Data>
 		<Data Name="ExternalApp">
 			<Value>External Application</Value>
@@ -925,8 +940,17 @@
 		<Data Name="GenProfileSaveDescLong">
 			<Value>Please enter a name for the new password generator profile, or select an existing profile name to overwrite it:</Value>
 		</Data>
+		<Data Name="GenPwAccept">
+			<Value>Accept this password?</Value>
+		</Data>
 		<Data Name="GenPwBasedOnPrevious">
 			<Value>Derive from previous password</Value>
+		</Data>
+		<Data Name="GenPwSprVariant">
+			<Value>The generated password contains a placeholder. When using this password (e.g. by copying it to the clipboard or auto-typing it), the placeholder will be replaced, i.e. effectively a different password might be used.</Value>
+		</Data>
+		<Data Name="Gradient">
+			<Value>Gradient</Value>
 		</Data>
 		<Data Name="Group">
 			<Value>Group</Value>
@@ -1026,6 +1050,9 @@
 		</Data>
 		<Data Name="ImportStc">
 			<Value>Import into active database</Value>
+		</Data>
+		<Data Name="IncompatibleEnv">
+			<Value>incompatible with current environment</Value>
 		</Data>
 		<Data Name="IncompatibleWithSorting">
 			<Value>incompatible with sorting</Value>
@@ -1276,6 +1303,9 @@
 		<Data Name="NoCmd">
 			<Value>&amp;No</Value>
 		</Data>
+		<Data Name="NoEncNoCompress">
+			<Value>Make sure that it is not encrypted and not compressed.</Value>
+		</Data>
 		<Data Name="NoFileAccessRead">
 			<Value>The operating system didn't grant KeePass read access to the specified file.</Value>
 		</Data>
@@ -1320,9 +1350,6 @@
 		</Data>
 		<Data Name="Ok">
 			<Value>OK</Value>
-		</Data>
-		<Data Name="OkCmd">
-			<Value>&amp;OK</Value>
 		</Data>
 		<Data Name="On">
 			<Value>On</Value>
@@ -1543,6 +1570,12 @@
 		<Data Name="PrintDesc">
 			<Value>Print password entries.</Value>
 		</Data>
+		<Data Name="Private">
+			<Value>Private</Value>
+		</Data>
+		<Data Name="Professional">
+			<Value>Professional</Value>
+		</Data>
 		<Data Name="QuickSearchExclExpired">
 			<Value>Exclude expired entries in quick searches</Value>
 		</Data>
@@ -1599,6 +1632,9 @@
 		</Data>
 		<Data Name="RemoteHostReachable">
 			<Value>Remote host is reachable (ping)</Value>
+		</Data>
+		<Data Name="RepairCmd">
+			<Value>&amp;Repair</Value>
 		</Data>
 		<Data Name="RepairMode">
 			<Value>Repair Mode</Value>
@@ -1743,6 +1779,9 @@
 		</Data>
 		<Data Name="SelfTestFailed">
 			<Value>One or more of the KeePass self-tests failed.</Value>
+		</Data>
+		<Data Name="SendingNoun">
+			<Value>Sending</Value>
 		</Data>
 		<Data Name="Separator">
 			<Value>Separator</Value>
@@ -1978,6 +2017,9 @@
 		<Data Name="UnknownError">
 			<Value>An unknown error occurred.</Value>
 		</Data>
+		<Data Name="UnsupportedByMono">
+			<Value>unsupported by Mono</Value>
+		</Data>
 		<Data Name="UpdateCheck">
 			<Value>Update Check</Value>
 		</Data>
@@ -2026,9 +2068,6 @@
 		<Data Name="UrlSaveTitle">
 			<Value>Save To URL</Value>
 		</Data>
-		<Data Name="UseCustomToolStripRenderer">
-			<Value>Use custom ToolStrip renderer</Value>
-		</Data>
 		<Data Name="UseFileLocks">
 			<Value>Use database lock files</Value>
 		</Data>
@@ -2046,6 +2085,12 @@
 		</Data>
 		<Data Name="Uuid">
 			<Value>UUID</Value>
+		</Data>
+		<Data Name="UuidDupInDb">
+			<Value>The database contains duplicate UUIDs.</Value>
+		</Data>
+		<Data Name="UuidFix">
+			<Value>When closing this dialog, KeePass will fix the problem (by generating new UUIDs for duplicates) and continue.</Value>
 		</Data>
 		<Data Name="ValidationFailed">
 			<Value>Validation failed</Value>
@@ -2146,6 +2191,9 @@
 		<Data Name="ErrorInClipboard">
 			<Value>An extended error report has been copied to the clipboard.</Value>
 		</Data>
+		<Data Name="Expect100Continue">
+			<Value>Expect 100-Continue responses</Value>
+		</Data>
 		<Data Name="FatalError">
 			<Value>Fatal Error</Value>
 		</Data>
@@ -2191,6 +2239,9 @@
 		<Data Name="FrameworkNotImplExcp">
 			<Value>The .NET framework/runtime under which KeePass is currently running does not support this operation.</Value>
 		</Data>
+		<Data Name="General">
+			<Value>General</Value>
+		</Data>
 		<Data Name="InvalidCompositeKey">
 			<Value>The composite key is invalid!</Value>
 		</Data>
@@ -2212,6 +2263,15 @@
 		<Data Name="OldFormat">
 			<Value>The selected file appears to be an old format</Value>
 		</Data>
+		<Data Name="Passive">
+			<Value>Passive</Value>
+		</Data>
+		<Data Name="PreAuth">
+			<Value>Pre-authenticate</Value>
+		</Data>
+		<Data Name="Timeout">
+			<Value>Timeout</Value>
+		</Data>
 		<Data Name="TryAgainSecs">
 			<Value>Please try it again in a few seconds.</Value>
 		</Data>
@@ -2220,6 +2280,9 @@
 		</Data>
 		<Data Name="UserAccountKeyError">
 			<Value>The operating system did not grant KeePass read/write access to the user profile folder, where the protected user key is stored.</Value>
+		</Data>
+		<Data Name="UserAgent">
+			<Value>User agent</Value>
 		</Data>
 	</StringTable>
 </Translation>

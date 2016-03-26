@@ -1,6 +1,6 @@
 /*
   KeePass Password Safe - The Open-Source Password Manager
-  Copyright (C) 2003-2014 Dominik Reichl <dominik.reichl@t-online.de>
+  Copyright (C) 2003-2016 Dominik Reichl <dominik.reichl@t-online.de>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -19,18 +19,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Security;
-using System.Security.Cryptography;
-using System.Drawing;
-using System.Xml;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Xml;
+
+#if !KeePassUAP
+using System.Drawing;
+#endif
 
 using KeePassLib;
 using KeePassLib.Collections;
-using KeePassLib.Cryptography;
-using KeePassLib.Cryptography.Cipher;
 using KeePassLib.Interfaces;
 using KeePassLib.Resources;
 using KeePassLib.Security;
@@ -100,9 +99,12 @@ namespace KeePassLib.Serialization
 			xrs.IgnoreProcessingInstructions = true;
 			xrs.IgnoreWhitespace = true;
 
-#if !KeePassRT
+#if KeePassUAP
+			xrs.DtdProcessing = DtdProcessing.Prohibit;
+#else
 #if !KeePassLibSD
-			xrs.ProhibitDtd = true;
+			xrs.ProhibitDtd = true; // Obsolete in .NET 4, but still there
+			// xrs.DtdProcessing = DtdProcessing.Prohibit; // .NET 4 only
 #endif
 			xrs.ValidationType = ValidationType.None;
 #endif
@@ -807,7 +809,19 @@ namespace KeePassLib.Serialization
 				if(strRef != null)
 				{
 					ProtectedBinary pb = BinPoolGet(strRef);
-					if(pb != null) return pb;
+					if(pb != null)
+					{
+						// https://sourceforge.net/p/keepass/feature-requests/2023/
+						xr.MoveToElement();
+#if DEBUG
+						string strInner = ReadStringRaw(xr);
+						Debug.Assert(string.IsNullOrEmpty(strInner));
+#else
+						ReadStringRaw(xr);
+#endif
+
+						return pb;
+					}
 					else { Debug.Assert(false); }
 				}
 				else { Debug.Assert(false); }
