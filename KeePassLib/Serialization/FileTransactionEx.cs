@@ -40,7 +40,7 @@ namespace KeePassLib.Serialization
 
 		private bool m_bMadeUnhidden = false;
 
-		private const string StrTempSuffix = ".tmp";
+		public const string StrTempSuffix = ".tmp";
 
 		private static Dictionary<string, bool> g_dEnabled =
 			new Dictionary<string, bool>(StrUtil.CaseIgnoreComparer);
